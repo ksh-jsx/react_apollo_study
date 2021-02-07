@@ -12,6 +12,7 @@
   "author": "shkim061198@gmail.com",
   "license": "ISC",
   "dependencies": {
+    "axios": "^0.21.1",
     "babel-cli": "^6.26.0",
     "babel-preset-env": "^1.7.0",
     "babel-preset-stage-3": "^6.24.1",
