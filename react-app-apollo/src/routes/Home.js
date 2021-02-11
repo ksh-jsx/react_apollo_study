@@ -97,21 +97,36 @@ const Movies = styled.div`
 
 function App() {
 
-  const [pos, setPos] = useState('top');
-  
-
   const GET_MOVIES = gql`
-    {
-      movies {
+    query getMovies($limit: Int) {
+      movies(limit: $limit) {
         id
         medium_cover_image
       }
     }
   `;
+  const [pos, setPos] = useState('top');
+  const [list, setList] = useState([]);
+
+  const { loading, data } = useQuery(GET_MOVIES, {
+    variables: { limit: 12 },
+    
+  });
+
+  const { loading2, data2 } = useQuery(GET_MOVIES, {
+    variables: { limit: 120 },
+    onCompleted:data => {setList(data.movies)}
+  });
 
   
 
-  const { loading, data } = useQuery(GET_MOVIES);
+  const renderMovies = (movie_list) => { 
+    const movies = movie_list.map((m) => {
+      return 
+    })
+    
+    return movies
+  }
 
   const getScrollPosition = () => {
     const position =  document.querySelector('html').scrollTop;
@@ -125,11 +140,36 @@ function App() {
         {top: '0'}
       ], 200);
     }
+
+    if( Math.round(Math.floor(position)) >= (document.body.scrollHeight - document.documentElement.clientHeight) / 1.2){
+      console.log(list)
+      let count = 12
+      /*
+      data?.movies = [
+        ...data?.movies,
+        {
+          id: ++count,
+          medium_cover_image: timg
+        },
+        {
+          id: ++count,
+          medium_cover_image: timg
+        },
+        {
+          id: ++count,
+          medium_cover_image: timg
+        },
+        {
+          id: ++count,
+          medium_cover_image: timg
+        }
+      ];
+      */
+    }
     
   };
   
   useEffect(() => {
-  
     window.addEventListener("scroll", getScrollPosition);
   }, []);
   
@@ -137,29 +177,28 @@ function App() {
     <Container>
       <TopbarWrapper Pos={pos} id="TopbarWrapper">
         <Topbar>
-            <LogoWrapper>
-                
+            <LogoWrapper> 
             </LogoWrapper>
             <MenuWrapper>
                 <ul>
                     <li>
-                        <a href="/"><span>Home</span></a>
+                      <a href="/"><span>Home</span></a>
                     </li>
                     <li>
-                        <a href="/"><span>Social</span></a>
+                      <a href="/"><span>Social</span></a>
                     </li>
                     <li>
-                        <a href="/"><span>Service</span></a>
+                      <a href="/"><span>Service</span></a>
                     </li>
                     <li>
-                        <a href="/"><span>Agent</span></a>
+                      <a href="/"><span>Agent</span></a>
                     </li>
                 </ul>
             </MenuWrapper>
         </Topbar>
       </TopbarWrapper>
       <Header>
-          <Parallax  bgImage={timg} strength={800} style={{overflow:'hidden',width:'100%',height:'100%'}}>
+          <Parallax bgImage={timg} strength={800} style={{overflow:'hidden',width:'100%',height:'100%'}}>
               <Title> Yts Movie API </Title>
               <Subtitle>I love GraphQL</Subtitle>
           </Parallax>
