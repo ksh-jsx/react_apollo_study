@@ -97,50 +97,82 @@ const Movies = styled.div`
 
 function App() {
 
-  const GET_MOVIES = gql`
-    query getMovies($limit: Int) {
-      movies(limit: $limit) {
-        id
-        medium_cover_image
-      }
-    }
-  `;
-
+  const [t, setT] = useState();
   const [pos, setPos] = useState('top');
   const [list, setList] = useState();
-  let count = 12
+  const [list2, setList2] = useState();
 
-  const { loading, data, error } = useQuery(GET_MOVIES, {
-    variables: { limit: 12 },
-    onCompleted: setList
-  });
+  
 
-  const { loading2, data2 } = useQuery(GET_MOVIES, {
-    variables: { limit: 60 },
-  });
+  const renderMovies = () => { 
+    const movies = list.map((m) => {
+      return <Movie key={m.id} id={m.id} bg={m.medium_cover_image} />
+    })
+    return movies
+  }
 
-  const getScrollPosition = () => {
-    const position =  document.querySelector('html').scrollTop;
-    if(position > 100) setPos('scroll') 
-    else {
-      setPos('top');
-      const target = document.getElementById('TopbarWrapper')
-      
-      target.animate([
-        {top: '-50px'},
-        {top: '0'}
-      ], 200);
-    }
-
-    if( Math.round(Math.floor(position)) >= (document.body.scrollHeight - document.documentElement.clientHeight) / 1.2){
-      console.log(list?.movies)
-    }
-    
-  };
   useEffect(() => {
-    window.addEventListener("scroll", getScrollPosition);    
-    console.log(list)
-  },[])
+    let data,data2;
+    (async () => {
+      const url = 'https://yts.mx/api/v2/list_movies.json?sort_by=like_count&limit=12';
+      const url2 = 'https://yts.mx/api/v2/list_movies.json?sort_by=like_count&limit=48';
+      const response =  await fetch(url);
+      const response2 =  await fetch(url2);
+      data = await response.json();
+      data2 = await response2.json();
+    })()
+    .then(()=>{
+      console.log()
+      setList(data.data.movies)
+      setList2(data2.data.movies)
+    })
+
+    const getScrollPosition = () => {
+      const position =  document.querySelector('html').scrollTop;
+      if(position > 100) setPos('scroll') 
+      else {
+        setPos('top');
+        const target = document.getElementById('TopbarWrapper')
+        
+        target.animate([
+          {top: '-50px'},
+          {top: '0'}
+        ], 200);
+      }   
+      let count = list.length   
+      if( Math.round(Math.floor(position)) >= ((document.body.scrollHeight - document.documentElement.clientHeight) / 1.2)){
+        if(count+4 <= 48 ){
+          console.log(list)
+          setList([
+            ...list,
+            {
+              id : list2[count].id,            
+              medium_cover_image : list2[count++].medium_cover_image
+    
+            },
+            {
+              id : list2[count].id,            
+              medium_cover_image : list2[count++].medium_cover_image
+            },
+            {
+              id : list2[count].id,            
+              medium_cover_image : list2[count++].medium_cover_image
+    
+            },
+            {
+              id : list2[count].id,            
+              medium_cover_image : list2[count++].medium_cover_image
+            }
+          ]) 
+        }
+      }
+    };
+
+    window.addEventListener("scroll", getScrollPosition, { passive: true });    
+    return () => window.removeEventListener("scroll", getScrollPosition);
+  },[pos,list,list2]) 
+
+
   
   return (
     <Container>
@@ -151,7 +183,7 @@ function App() {
             <MenuWrapper>
                 <ul>
                     <li>
-                      <a href="/"><span>Home</span></a>
+                      <a><span>{pos}</span></a>
                     </li>
                     <li>
                       <a href="/"><span>Social</span></a>
@@ -172,13 +204,11 @@ function App() {
               <Subtitle>I love GraphQL</Subtitle>
           </Parallax>
       </Header>
-      {loading ? <Loading>Loading...</Loading> : (
+        {!list && 'Loading...'}
         <Movies>
-          {list?.movies.map(m => (
-            <Movie key={m.id} id={m.id} bg={m.medium_cover_image} />
-          ))}
+          {list && renderMovies() }
         </Movies>
-      )}
+    
       
     </Container>
   );
