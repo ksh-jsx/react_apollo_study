@@ -105,28 +105,19 @@ function App() {
       }
     }
   `;
-  const [pos, setPos] = useState('top');
-  const [list, setList] = useState([]);
 
-  const { loading, data } = useQuery(GET_MOVIES, {
+  const [pos, setPos] = useState('top');
+  const [list, setList] = useState();
+  let count = 12
+
+  const { loading, data, error } = useQuery(GET_MOVIES, {
     variables: { limit: 12 },
-    
+    onCompleted: setList
   });
 
   const { loading2, data2 } = useQuery(GET_MOVIES, {
-    variables: { limit: 120 },
-    onCompleted:data => {setList(data.movies)}
+    variables: { limit: 60 },
   });
-
-  
-
-  const renderMovies = (movie_list) => { 
-    const movies = movie_list.map((m) => {
-      return 
-    })
-    
-    return movies
-  }
 
   const getScrollPosition = () => {
     const position =  document.querySelector('html').scrollTop;
@@ -142,36 +133,14 @@ function App() {
     }
 
     if( Math.round(Math.floor(position)) >= (document.body.scrollHeight - document.documentElement.clientHeight) / 1.2){
-      console.log(list)
-      let count = 12
-      /*
-      data?.movies = [
-        ...data?.movies,
-        {
-          id: ++count,
-          medium_cover_image: timg
-        },
-        {
-          id: ++count,
-          medium_cover_image: timg
-        },
-        {
-          id: ++count,
-          medium_cover_image: timg
-        },
-        {
-          id: ++count,
-          medium_cover_image: timg
-        }
-      ];
-      */
+      console.log(list?.movies)
     }
     
   };
-  
   useEffect(() => {
-    window.addEventListener("scroll", getScrollPosition);
-  }, []);
+    window.addEventListener("scroll", getScrollPosition);    
+    console.log(list)
+  },[])
   
   return (
     <Container>
@@ -203,12 +172,14 @@ function App() {
               <Subtitle>I love GraphQL</Subtitle>
           </Parallax>
       </Header>
-      {loading && <Loading>Loading...</Loading>}
-      <Movies>
-        {data?.movies?.map(m => (
-          <Movie key={m.id} id={m.id} bg={m.medium_cover_image} />
-        ))}
-      </Movies>
+      {loading ? <Loading>Loading...</Loading> : (
+        <Movies>
+          {list?.movies.map(m => (
+            <Movie key={m.id} id={m.id} bg={m.medium_cover_image} />
+          ))}
+        </Movies>
+      )}
+      
     </Container>
   );
 };
