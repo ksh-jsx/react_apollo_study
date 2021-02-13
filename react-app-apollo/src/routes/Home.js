@@ -6,8 +6,7 @@ import { Parallax } from 'react-parallax';
 import styled, { keyframes } from 'styled-components';
 import Movie from "../components/Movie";
 import timg from "./t.jpg";
-import useInfiniteScroll from "react-infinite-scroll-hook";
-import PropTypes from "prop-types";
+
 
 const Container = styled.div`
   display: flex;
@@ -96,54 +95,48 @@ const Movies = styled.div`
   top: -50px;
 `;
 
-const ARRAY_SIZE = 12;
-const RESPONSE_TIME = 1000;
+function App() {
 
-function loadItems(prevArray = [], nextArray = [], startCursor = 0) {
-  return new Promise(resolve => {
-    setTimeout(() => {
-      let newArray = prevArray;
-      
-      for (let i = startCursor; i < startCursor + ARRAY_SIZE; i++) {
-        const newItem = [
-          {
-            id : nextArray[newArray.length]?.id,            
-            medium_cover_image : nextArray[newArray.length++]?.medium_cover_image
-          },
-          {
-            id : nextArray[newArray.length]?.id,            
-            medium_cover_image : nextArray[newArray.length++]?.medium_cover_image
-          },
-          {
-            id : nextArray[newArray.length]?.id,            
-            medium_cover_image : nextArray[newArray.length++]?.medium_cover_image
-          },
-          {
-            id : nextArray[newArray.length]?.id,            
-            medium_cover_image : nextArray[newArray.length++]?.medium_cover_image
-          },
-      ];
-        newArray = [...newArray, newItem];
+  const GET_MOVIES = gql`
+    query getMovies($limit: Int) {
+      movies(limit: $limit) {
+        id
+        medium_cover_image
       }
+    }
+  `;
 
-      resolve(newArray);
-    }, RESPONSE_TIME);
-  });
-}
+  const mdata = [
+    {
+      id : 1,            
+      medium_cover_image : timg
+    },
+    {
+      id : 2,            
+      medium_cover_image : timg
+    },
+    {
+      id : 3,            
+      medium_cover_image : timg
+    },
+    {
+      id : 4,            
+      medium_cover_image : timg
+    },
+  ]
 
-function App({scrollContainer}) {
-  
-  const [loading, setLoading] = useState(false);
   const [pos, setPos] = useState('top');
-  const [list, setList] = useState();
+  const [list, setList] = useState(mdata);
   const [list2, setList2] = useState();
+  let count = 12;
+  const { loading, data, error } = useQuery(GET_MOVIES, {
+    variables: { limit: 12 },
+  });
 
-  const renderMovies = () => {     
-    const movies = list.map((m) => {
-      return <Movie key={m.id} id={m.id} bg={m.medium_cover_image} />
-    })
-    return movies
-  }
+  const { loading2, data2 } = useQuery(GET_MOVIES, {
+    variables: { limit: 48 },
+    onCompleted: setList2
+  });
 
   const getScrollPosition = () => {
     const position =  document.querySelector('html').scrollTop;
@@ -151,52 +144,39 @@ function App({scrollContainer}) {
     else {
       setPos('top');
       const target = document.getElementById('TopbarWrapper')
-      
       target.animate([
         {top: '-50px'},
         {top: '0'}
       ], 200);
-    }   
+    }    
+    if(count < 48 && list2 && Math.round(Math.floor(position)) >= (document.body.scrollHeight - document.documentElement.clientHeight) / 1.2){        
+      count+=4;
+      setList(before => [
+        ...before,
+        {
+          id : list2.movies[before.length]?.id,            
+          medium_cover_image : list2.movies[before.length]?.medium_cover_image
+        },
+        {
+          id : list2.movies[before.length+1]?.id,            
+          medium_cover_image : list2.movies[before.length+1]?.medium_cover_image
+        },
+        {
+          id : list2.movies[before.length+2]?.id,            
+          medium_cover_image : list2.movies[before.length+2]?.medium_cover_image
+        },
+        {
+          id : list2.movies[before.length+3]?.id,            
+          medium_cover_image : list2.movies[before.length+3]?.medium_cover_image
+        },
+      ])      
+    }
   };
 
-  function handleLoadMore() {
-    setLoading(true);
-    loadItems(list, list2, list?.length).then(newArray => {
-      setLoading(false);
-      setList(newArray);
-    });
-  }
-
-  const infiniteRef = useInfiniteScroll({
-    loading,
-    // This value is set to "true" for this demo only. You will need to
-    // get this value from the API when you request your items.
-    hasNextPage: true,
-    threshold: 400,
-    onLoadMore: handleLoadMore,
-    scrollContainer
-  });
-
-
   useEffect(() => {
-    let data,data2;
-    (async () => {
-      const url = 'https://yts.mx/api/v2/list_movies.json?sort_by=like_count&limit=12';
-      const url2 = 'https://yts.mx/api/v2/list_movies.json?sort_by=like_count&limit=48';
-      const response =  await fetch(url);
-      const response2 =  await fetch(url2);
-      data = await response.json();
-      data2 = await response2.json();
-    })()
-    .then(()=>{
-      setList(data.data.movies)
-      setList2(data2.data.movies)
-    })
-
-    window.addEventListener("scroll", getScrollPosition, { passive: true });    
-    return () => window.removeEventListener("scroll", getScrollPosition);
-  },[pos,list,list2]) 
-
+    window.addEventListener("scroll", getScrollPosition);    
+  },[list,list2])
+  
   return (
     <Container>
       <TopbarWrapper Pos={pos} id="TopbarWrapper">
@@ -206,7 +186,7 @@ function App({scrollContainer}) {
             <MenuWrapper>
                 <ul>
                     <li>
-                      <a><span>{pos}</span></a>
+                      <a href="/"><span>Home</span></a>
                     </li>
                     <li>
                       <a href="/"><span>Social</span></a>
@@ -227,18 +207,15 @@ function App({scrollContainer}) {
               <Subtitle>I love GraphQL</Subtitle>
           </Parallax>
       </Header>
-        {loading && 'Loading...'}
-        <Movies ref={infiniteRef}>
-          {list && renderMovies() }
+      {loading ? <Loading>Loading...</Loading> : (
+        <Movies>
+          { list?.map(m => (
+            <Movie key={m.id} id={m.id} bg={m.medium_cover_image} />
+          ))}
         </Movies>
-    
+      )}
       
     </Container>
   );
 };
-
-App.propTypes = {
-  scrollContainer: PropTypes.oneOf(["window", "parent"])
-};
-
-export default App;
+  export default App;
