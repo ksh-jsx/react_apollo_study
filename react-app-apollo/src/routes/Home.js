@@ -6,7 +6,8 @@ import { Parallax } from 'react-parallax';
 import styled, { keyframes } from 'styled-components';
 import Movie from "../components/Movie";
 import timg from "./t.jpg";
-
+import useInfiniteScroll from "react-infinite-scroll-hook";
+import PropTypes from "prop-types";
 
 const Container = styled.div`
   display: flex;
@@ -95,21 +96,87 @@ const Movies = styled.div`
   top: -50px;
 `;
 
-function App() {
+const ARRAY_SIZE = 12;
+const RESPONSE_TIME = 1000;
 
-  const [t, setT] = useState();
+function loadItems(prevArray = [], nextArray = [], startCursor = 0) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      let newArray = prevArray;
+      
+      for (let i = startCursor; i < startCursor + ARRAY_SIZE; i++) {
+        const newItem = [
+          {
+            id : nextArray[newArray.length]?.id,            
+            medium_cover_image : nextArray[newArray.length++]?.medium_cover_image
+          },
+          {
+            id : nextArray[newArray.length]?.id,            
+            medium_cover_image : nextArray[newArray.length++]?.medium_cover_image
+          },
+          {
+            id : nextArray[newArray.length]?.id,            
+            medium_cover_image : nextArray[newArray.length++]?.medium_cover_image
+          },
+          {
+            id : nextArray[newArray.length]?.id,            
+            medium_cover_image : nextArray[newArray.length++]?.medium_cover_image
+          },
+      ];
+        newArray = [...newArray, newItem];
+      }
+
+      resolve(newArray);
+    }, RESPONSE_TIME);
+  });
+}
+
+function App({scrollContainer}) {
+  
+  const [loading, setLoading] = useState(false);
   const [pos, setPos] = useState('top');
   const [list, setList] = useState();
   const [list2, setList2] = useState();
 
-  
-
-  const renderMovies = () => { 
+  const renderMovies = () => {     
     const movies = list.map((m) => {
       return <Movie key={m.id} id={m.id} bg={m.medium_cover_image} />
     })
     return movies
   }
+
+  const getScrollPosition = () => {
+    const position =  document.querySelector('html').scrollTop;
+    if(position > 100) setPos('scroll') 
+    else {
+      setPos('top');
+      const target = document.getElementById('TopbarWrapper')
+      
+      target.animate([
+        {top: '-50px'},
+        {top: '0'}
+      ], 200);
+    }   
+  };
+
+  function handleLoadMore() {
+    setLoading(true);
+    loadItems(list, list2, list?.length).then(newArray => {
+      setLoading(false);
+      setList(newArray);
+    });
+  }
+
+  const infiniteRef = useInfiniteScroll({
+    loading,
+    // This value is set to "true" for this demo only. You will need to
+    // get this value from the API when you request your items.
+    hasNextPage: true,
+    threshold: 400,
+    onLoadMore: handleLoadMore,
+    scrollContainer
+  });
+
 
   useEffect(() => {
     let data,data2;
@@ -122,58 +189,14 @@ function App() {
       data2 = await response2.json();
     })()
     .then(()=>{
-      console.log()
       setList(data.data.movies)
       setList2(data2.data.movies)
     })
-
-    const getScrollPosition = () => {
-      const position =  document.querySelector('html').scrollTop;
-      if(position > 100) setPos('scroll') 
-      else {
-        setPos('top');
-        const target = document.getElementById('TopbarWrapper')
-        
-        target.animate([
-          {top: '-50px'},
-          {top: '0'}
-        ], 200);
-      }   
-      let count = list.length   
-      if( Math.round(Math.floor(position)) >= ((document.body.scrollHeight - document.documentElement.clientHeight) / 1.2)){
-        if(count+4 <= 48 ){
-          console.log(list)
-          setList([
-            ...list,
-            {
-              id : list2[count].id,            
-              medium_cover_image : list2[count++].medium_cover_image
-    
-            },
-            {
-              id : list2[count].id,            
-              medium_cover_image : list2[count++].medium_cover_image
-            },
-            {
-              id : list2[count].id,            
-              medium_cover_image : list2[count++].medium_cover_image
-    
-            },
-            {
-              id : list2[count].id,            
-              medium_cover_image : list2[count++].medium_cover_image
-            }
-          ]) 
-        }
-      }
-    };
 
     window.addEventListener("scroll", getScrollPosition, { passive: true });    
     return () => window.removeEventListener("scroll", getScrollPosition);
   },[pos,list,list2]) 
 
-
-  
   return (
     <Container>
       <TopbarWrapper Pos={pos} id="TopbarWrapper">
@@ -204,8 +227,8 @@ function App() {
               <Subtitle>I love GraphQL</Subtitle>
           </Parallax>
       </Header>
-        {!list && 'Loading...'}
-        <Movies>
+        {loading && 'Loading...'}
+        <Movies ref={infiniteRef}>
           {list && renderMovies() }
         </Movies>
     
@@ -213,4 +236,9 @@ function App() {
     </Container>
   );
 };
-  export default App;
+
+App.propTypes = {
+  scrollContainer: PropTypes.oneOf(["window", "parent"])
+};
+
+export default App;
